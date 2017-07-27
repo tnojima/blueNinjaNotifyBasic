@@ -56,7 +56,7 @@ static uint64_t hrgn_bdaddr  = 0xc00100000000;   //
 static void init_io_state(void);
 
 /*--- GATT profile definition ---*/
-uint8_t bnmsg_gap_device_name[] = "HyouRowGan00";
+uint8_t bnmsg_gap_device_name[] = "BLE_SAMPLE00";
 uint8_t bnmsg_gap_appearance[] = {0x00, 0x00};
 
 const uint8_t bnmsg_di_manufname[] = "Cerevo";
@@ -332,7 +332,7 @@ uint8_t bnmsg_advertising_data[] = {
 
     0x0d, /* length of this data */
     0x08, /* AD type = Short local name */
-    'H', 'y', 'o', 'u', 'R', 'o', 'w', 'G', 'a', 'n', '0', '0', /* HyouRowGan00 */
+     'B','L','E', '_', 'S', 'A', 'M', 'P', 'L', 'E', '0', '0', /* BLE_SAMPLE00 */
 
     0x05, /* length of this data */
     0x03, /* AD type = Complete list of 16-bit UUIDs available */
@@ -355,7 +355,7 @@ uint8_t bnmsg_scan_resp_data[] = {
 
     0x0d, /* length of this data */
     0x09, /* AD type = Complete local name */
-    'H', 'y', 'o', 'u', 'R', 'o', 'w', 'G', 'a', 'n', '0', '0' /* HyouRowGan00 */
+    'B','L','E', '_', 'S', 'A', 'M', 'P', 'L', 'E', '0', '0' /* BLE_SAMPLE00 */
 };
 
 /*=== BlueNinja messenger application ===*/
@@ -450,7 +450,7 @@ BLELib_RespForDemand writeinDemandCb(const uint8_t unique_id, const uint8_t *con
         Driver_GPIO.WritePin(23, pin);
         
         if ((value[0] & 0xf0) != (gpio_val & 0xf0)) {
-            //•Ï‰»‚ ‚Á‚½‚Ì‚Å”½‰f
+            //ï¿½Ï‰ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ì‚Å”ï¿½ï¿½f
             gpio_val &= 0x0f;
             gpio_val |= (value[0] & 0xf0);
             BLELib_updateValue(unique_id, &gpio_val, sizeof(gpio_val));
@@ -626,7 +626,7 @@ int BLE_init(uint8_t id)
     
     bnmsg_gap_device_name[11] = id + '0';
     
-    //GPIO“™ƒyƒŠƒtƒFƒ‰ƒ‹‚ð‰Šúó‘Ô‚ÉÝ’è
+    //GPIOï¿½ï¿½ï¿½yï¿½ï¿½ï¿½tï¿½Fï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ô‚ÉÝ’ï¿½
     init_io_state();
     
     return 0;
@@ -678,7 +678,7 @@ static void ble_online_gpio_update_val(void)
     }
     
     if ((gpio_val & 0x0f) != di) {
-        //“ü—Í‚É•ÏX‚ ‚è
+        //ï¿½ï¿½ï¿½Í‚É•ÏXï¿½ï¿½ï¿½ï¿½
         gpio_val &= 0xf0;
         gpio_val |= di;
         BLELib_updateValue(GATT_UID_GPIO, &gpio_val, sizeof(gpio_val));
@@ -693,10 +693,10 @@ static void ble_online_airp_notify(void)
     
     temp = BMP280_drv_temp_get();
     airp = BMP280_drv_press_get();
-    //‰·“x(0.01digC’PˆÊ)
+    //ï¿½ï¿½ï¿½x(0.01digCï¿½Pï¿½ï¿½)
     airp_val[0] = (temp & 0xff);
     airp_val[1] = (temp >> 8) & 0xff;
-    //‹Cˆ³(1/256Pa’PˆÊ)
+    //ï¿½Cï¿½ï¿½(1/256Paï¿½Pï¿½ï¿½)
     airp_val[2] = (airp & 0xff);
     airp_val[3] = (airp >> 8) & 0xff;
     airp_val[4] = (airp >> 16) & 0xff;
@@ -713,16 +713,42 @@ static void ble_online_motion_sample(void)
 {
     MPU9250_gyro_val  gyro;
     MPU9250_accel_val acel;
+    MPU9250_magnetometer_val magm;
+    uint8_t offset=0;
     
     if (MPU9250_drv_read_gyro(&gyro)) {
-        gx += (int16_t)gyro.raw_x;
-        gy += (int16_t)gyro.raw_y;
-        gz += (int16_t)gyro.raw_z;
+        gx = (int16_t)gyro.raw_x;
+        gy = (int16_t)gyro.raw_y;
+        gz = (int16_t)gyro.raw_z;
+        
+        //Gyro: X
+        memcpy(&motion_val[0  + offset], &gx, 2);
+        //Gyro: Y
+        memcpy(&motion_val[2  + offset], &gy, 2);
+        //Gyro: Z
+        memcpy(&motion_val[4  + offset], &gz, 2);
     }
     if (MPU9250_drv_read_accel(&acel)) {
-        ax += (int16_t)acel.raw_x;
-        ay += (int16_t)acel.raw_y;
-        az += (int16_t)acel.raw_z;
+        ax = (int16_t)acel.raw_x;
+        ay = (int16_t)acel.raw_y;
+        az = (int16_t)acel.raw_z;
+        //Accel: X
+        memcpy(&motion_val[6  + offset], &ax, 2);
+        //Accel: Y
+        memcpy(&motion_val[8  + offset], &ay, 2);
+        //Accel: Z
+        memcpy(&motion_val[10 + offset], &az, 2);
+    }
+    /* Magnetometer */
+    if (MPU9250_drv_read_magnetometer(&magm)) {
+        //Magnetometer: X
+        memcpy(&motion_val[12 + offset], &magm.raw_x, 2);
+        //Magnetometer: Y
+        memcpy(&motion_val[14 + offset], &magm.raw_y, 2);
+        //Magnetometer: Z
+        memcpy(&motion_val[16 + offset], &magm.raw_z, 2);
+    } else {
+        TZ01_console_puts("MPU9250_drv_read_magnetometer() failed.\r\n");
     }
 }
 
@@ -735,13 +761,8 @@ static void ble_online_motion_average(uint8_t cnt)
     MPU9250_magnetometer_val magm;
     
     if (current_mtu == 40) {
-        //500ms average * 2
-        if (cnt == 50) {
-            offset = 0;
-        } else {
-            offset = 18;
-        }
-        div = 10;
+        //40ms average 
+        div = 4;
     } else {
         //1000ms average
         if (cnt == 50) {
@@ -793,16 +814,10 @@ static void ble_online_motion_average(uint8_t cnt)
 static void ble_online_motion_notify(void)
 {
     int ret;
-    int val_len;
-    
-    if (current_mtu == 40) {
-        val_len = sizeof(motion_val);   //500ms average * 2
-    } else {
-        val_len = 18;                   //1000ms average
-    }
+    int val_len=18;
     for (int i = 0; i < (sizeof(motion_val) / 2); i++) {
         if (motion_val[i] != 0) {
-            //Œv‘ªŒ‹‰Ê‚ª•ÛŽ‚ç‚ê‚Ä‚é
+            //ï¿½vï¿½ï¿½ï¿½ï¿½ï¿½Ê‚ï¿½ï¿½ÛŽï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ä‚ï¿½
             ret = BLELib_notifyValue(GATT_UID_MOTION, motion_val, val_len);
             if (ret != BLELIB_OK) {
                 sprintf(msg, "GATT_UID_MOTION: Notify failed. ret=%d\r\n", ret);
@@ -868,51 +883,38 @@ int BLE_main(void)
             if (TZ01_system_tick_check_timeout(USRTICK_NO_BLE_MAIN)) {
                 TZ01_system_tick_start(USRTICK_NO_BLE_MAIN, 10);
                 
-                //LED“_–Å(0, 200, 400, 600, 800ms)
+                //LEDï¿½_ï¿½ï¿½(0, 200, 400, 600, 800ms)
                 if ((cnt % 20) == 0) {
                     led_blink = (led_blink == 0) ? 1 : 0;
                     Driver_GPIO.WritePin(11, led_blink);
                 }
                 
-                //GPIO“ü—ÍƒTƒ“ƒvƒŠƒ“ƒO(50ms–ˆ)
+                //GPIOï¿½ï¿½ï¿½ÍƒTï¿½ï¿½ï¿½vï¿½ï¿½ï¿½ï¿½ï¿½O(50msï¿½ï¿½)
                 if ((cnt % 5) == 0) {
                     di_state_update();
                 }
                 
-                //GPIO“ü—Í’Ê’m(100, 300, 500, 700, 900ms)
+                //GPIOï¿½ï¿½ï¿½Í’Ê’m(100, 300, 500, 700, 900ms)
                 if ((cnt % 20) == 10) {
                     ble_online_gpio_update_val();
                 }
                 
-                //‹Cˆ³ƒZƒ“ƒT[“Ç‚ÝŽæ‚è/XV(400ms)
-                if (cnt == 40) {
+                if ((cnt % 10) == 0) {
+                    //ï¿½Cï¿½ï¿½ï¿½Zï¿½ï¿½ï¿½Tï¿½[ï¿½Ç‚ÝŽï¿½ï¿½ï¿½
                     if (airp_enable_val == 1) {
                         ble_online_airp_notify();
                     }
-                }
                 
-                //ƒ‚[ƒVƒ‡ƒ“ƒZƒ“ƒT[ƒTƒ“ƒvƒŠƒ“ƒO(50ms–ˆ)
-                if ((cnt % 5) == 0) {
+                    //ï¿½ï¿½ï¿½[ï¿½Vï¿½ï¿½ï¿½ï¿½ï¿½Zï¿½ï¿½ï¿½Tï¿½[ï¿½Tï¿½ï¿½ï¿½vï¿½ï¿½ï¿½ï¿½ï¿½O&ï¿½Ê’m
                     if (motion_enable_val == 1) {
                         ble_online_motion_sample();
-                    }
-                }
-                
-                //ƒ‚[ƒVƒ‡ƒ“ƒZƒ“ƒTWŒv(500ms–ˆ)
-                if ((cnt % 50) == 0) {
-                    if (motion_enable_val == 1) {
-                        ble_online_motion_average(cnt);
-                    }
-                }
-                
-                //ƒ‚[ƒVƒ‡ƒ“ƒZƒ“ƒT’Ê’m
-                if ((cnt % 100) == 0) {
-                    if (motion_enable_val == 1) {
+                        //ble_online_motion_average(cnt);
                         ble_online_motion_notify();
                     }
                 }
                 
-                //1000ms‚ÅƒAƒbƒvƒ‰ƒEƒ“ƒh
+                
+                //1000msï¿½ÅƒAï¿½bï¿½vï¿½ï¿½ï¿½Eï¿½ï¿½ï¿½h
                 cnt = (cnt + 1) % 100;
             }
             break;

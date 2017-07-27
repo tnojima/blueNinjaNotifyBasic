@@ -1,0 +1,10 @@
+
+\.DS_Store
+
+displayBlueNinjaNotify_nodejs/node_modules
+
+hyourowgan/hyourowgan\.bin
+
+hyourowgan/hyourowgan\.elf
+
+*.BAK
