@@ -8,3 +8,5 @@ hyourowgan/hyourowgan\.bin
 hyourowgan/hyourowgan\.elf
 
 *.BAK
+
+hyourowgan/build/

@@ -450,7 +450,7 @@ BLELib_RespForDemand writeinDemandCb(const uint8_t unique_id, const uint8_t *con
         Driver_GPIO.WritePin(23, pin);
         
         if ((value[0] & 0xf0) != (gpio_val & 0xf0)) {
-            //�ω��������̂Ŕ��f
+            //変化あったので反映
             gpio_val &= 0x0f;
             gpio_val |= (value[0] & 0xf0);
             BLELib_updateValue(unique_id, &gpio_val, sizeof(gpio_val));
@@ -626,7 +626,7 @@ int BLE_init(uint8_t id)
     
     bnmsg_gap_device_name[11] = id + '0';
     
-    //GPIO���y���t�F�������������Ԃɐݒ�
+    //GPIO等ペリフェラルを初期状態に設定
     init_io_state();
     
     return 0;
@@ -685,6 +685,56 @@ static void ble_online_gpio_update_val(void)
     }
 }
 
+////===================================================
+// AIR PRESSURE AND TEMPARATURE SENSOR
+// RAW VALUE WILL BE
+//  BMP280_drv_temp_get() -> will return temparature value in 0.01digC
+// BMP280_drv_press_get() -> will return air pressure value in 1/256 Pa
+////===================================================
+static uint16_t temparature;  ///< buffer for average
+static uint32_t airpressure;  ///< buffer for average
+    
+////=====================================================
+///  @brief temparature and air pressure sampling and accumulate for average
+////=====================================================
+static void ble_online_airp_sample_accumulate(void)
+{
+    temparature += BMP280_drv_temp_get();
+    airpressure += BMP280_drv_press_get();
+}
+
+////=====================================================
+///  @brief temparature and air pressure average and notify
+///  @param [in] cont int count number of accmulation cycle
+////=====================================================
+static void ble_online_airp_average_notify(const int count)
+{
+    int ret;
+    uint16_t temp;
+    uint32_t airp;
+    
+    temp = temparature / count;
+    airp = airpressure / count;
+    //temparature(0.01digC)
+    airp_val[0] = (temp & 0xff);
+    airp_val[1] = (temp >> 8) & 0xff;
+    //air pressure(1/256Pa)
+    airp_val[2] = (airp & 0xff);
+    airp_val[3] = (airp >> 8) & 0xff;
+    airp_val[4] = (airp >> 16) & 0xff;
+    airp_val[5] = (airp >> 24) & 0xff;
+    
+    ret = BLELib_notifyValue(GATT_UID_AIRP, airp_val, sizeof(airp_val));
+    if (ret != BLELIB_OK) {
+        sprintf(msg, "GATT_UID_AIRP: Notify failed. ret=%d\r\n", ret);
+        TZ01_console_puts(msg);
+    }
+    temparature = 0;
+    airpressure = 0;
+}
+////=====================================================
+///  @brief temparature and air pressure sampling and notify
+////=====================================================
 static void ble_online_airp_notify(void)
 {
     int ret;
@@ -693,10 +743,10 @@ static void ble_online_airp_notify(void)
     
     temp = BMP280_drv_temp_get();
     airp = BMP280_drv_press_get();
-    //���x(0.01digC�P��)
+    //温度(0.01digC単位)
     airp_val[0] = (temp & 0xff);
     airp_val[1] = (temp >> 8) & 0xff;
-    //�C��(1/256Pa�P��)
+    //気圧(1/256Pa単位)
     airp_val[2] = (airp & 0xff);
     airp_val[3] = (airp >> 8) & 0xff;
     airp_val[4] = (airp >> 16) & 0xff;
@@ -817,7 +867,7 @@ static void ble_online_motion_notify(void)
     int val_len=18;
     for (int i = 0; i < (sizeof(motion_val) / 2); i++) {
         if (motion_val[i] != 0) {
-            //�v�����ʂ��ێ������Ă�
+            //計測結果が保持られてる
             ret = BLELib_notifyValue(GATT_UID_MOTION, motion_val, val_len);
             if (ret != BLELIB_OK) {
                 sprintf(msg, "GATT_UID_MOTION: Notify failed. ret=%d\r\n", ret);
@@ -839,6 +889,7 @@ int BLE_main(void)
     BLELib_State state;
     bool has_event;
     uint32_t pin;
+    uint16_t average_count_airp=5;
 
     state = BLELib_getState();
     has_event = BLELib_hasEvent();
@@ -883,29 +934,34 @@ int BLE_main(void)
             if (TZ01_system_tick_check_timeout(USRTICK_NO_BLE_MAIN)) {
                 TZ01_system_tick_start(USRTICK_NO_BLE_MAIN, 10);
                 
-                //LED�_��(0, 200, 400, 600, 800ms)
+                //LED点滅(0, 200, 400, 600, 800ms)
                 if ((cnt % 20) == 0) {
                     led_blink = (led_blink == 0) ? 1 : 0;
                     Driver_GPIO.WritePin(11, led_blink);
                 }
                 
-                //GPIO���̓T���v�����O(50ms��)
+                //GPIO入力サンプリング(50ms毎)
                 if ((cnt % 5) == 0) {
                     di_state_update();
                 }
                 
-                //GPIO���͒ʒm(100, 300, 500, 700, 900ms)
+                //GPIO入力通知(100, 300, 500, 700, 900ms)
                 if ((cnt % 20) == 10) {
                     ble_online_gpio_update_val();
                 }
                 
-                if ((cnt % 10) == 0) {
-                    //�C���Z���T�[�ǂݎ���
-                    if (airp_enable_val == 1) {
-                        ble_online_airp_notify();
+                //気圧センサー読み取り(毎回)/通知(average_count_airp*10ms)
+                if (airp_enable_val == 1) {
+                    ble_online_airp_sample_accumulate();
+                    if ((cnt % average_count_airp) == 0) {
+                        ble_online_airp_average_notify(average_count_airp);
+//                        ble_online_airp_notify();
                     }
+                }
+
+                if ((cnt % 10) == 0) {
                 
-                    //���[�V�����Z���T�[�T���v�����O&�ʒm
+                    //モーションセンサ通知
                     if (motion_enable_val == 1) {
                         ble_online_motion_sample();
                         //ble_online_motion_average(cnt);
@@ -914,7 +970,7 @@ int BLE_main(void)
                 }
                 
                 
-                //1000ms�ŃA�b�v���E���h
+                //1000msでアップラウンド
                 cnt = (cnt + 1) % 100;
             }
             break;
