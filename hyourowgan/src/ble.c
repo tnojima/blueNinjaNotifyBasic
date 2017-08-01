@@ -758,47 +758,27 @@ static void ble_online_airp_notify(void)
         TZ01_console_puts(msg);
     }
 }
-
-static void ble_online_motion_sample(void)
+////===================================================
+// Motion  SENSOR and Magneto sensor
+// RAW VALUE WILL BE
+//  MPU9250_drv_read_gyro() -> will return gyro value in 1/16.4 deg/s (MAX 2000deg/s)
+//  MPU9250_accel_val() -> will return acceleration value in 1/2048 G (MAX 16G)
+////===================================================
+static void ble_online_motion_sample_accumulate(void)
 {
     MPU9250_gyro_val  gyro;
     MPU9250_accel_val acel;
-    MPU9250_magnetometer_val magm;
     uint8_t offset=0;
     
     if (MPU9250_drv_read_gyro(&gyro)) {
-        gx = (int16_t)gyro.raw_x;
-        gy = (int16_t)gyro.raw_y;
-        gz = (int16_t)gyro.raw_z;
-        
-        //Gyro: X
-        memcpy(&motion_val[0  + offset], &gx, 2);
-        //Gyro: Y
-        memcpy(&motion_val[2  + offset], &gy, 2);
-        //Gyro: Z
-        memcpy(&motion_val[4  + offset], &gz, 2);
+        gx += (int16_t)gyro.raw_x;
+        gy += (int16_t)gyro.raw_y;
+        gz += (int16_t)gyro.raw_z;
     }
     if (MPU9250_drv_read_accel(&acel)) {
-        ax = (int16_t)acel.raw_x;
-        ay = (int16_t)acel.raw_y;
-        az = (int16_t)acel.raw_z;
-        //Accel: X
-        memcpy(&motion_val[6  + offset], &ax, 2);
-        //Accel: Y
-        memcpy(&motion_val[8  + offset], &ay, 2);
-        //Accel: Z
-        memcpy(&motion_val[10 + offset], &az, 2);
-    }
-    /* Magnetometer */
-    if (MPU9250_drv_read_magnetometer(&magm)) {
-        //Magnetometer: X
-        memcpy(&motion_val[12 + offset], &magm.raw_x, 2);
-        //Magnetometer: Y
-        memcpy(&motion_val[14 + offset], &magm.raw_y, 2);
-        //Magnetometer: Z
-        memcpy(&motion_val[16 + offset], &magm.raw_z, 2);
-    } else {
-        TZ01_console_puts("MPU9250_drv_read_magnetometer() failed.\r\n");
+        ax += (int16_t)acel.raw_x;
+        ay += (int16_t)acel.raw_y;
+        az += (int16_t)acel.raw_z;
     }
 }
 
@@ -807,38 +787,25 @@ static void ble_online_motion_average(uint8_t cnt)
     uint8_t offset;
     int16_t ave;
     int16_t div;
-    
     MPU9250_magnetometer_val magm;
-    
-    if (current_mtu == 40) {
-        //40ms average 
-        div = 4;
-    } else {
-        //1000ms average
-        if (cnt == 50) {
-            //NOP 500ms
-            return;
-        }
-        offset = 0;
-        div = 20;
-    }
+
     //Gyro: X
-    ave = gx / div;
+    ave = gx / cnt;
     memcpy(&motion_val[0  + offset], &ave, 2);
     //Gyro: Y
-    ave = gy / div;
+    ave = gy / cnt;
     memcpy(&motion_val[2  + offset], &ave, 2);
     //Gyro: Z
-    ave = gz / div;
+    ave = gz / cnt;
     memcpy(&motion_val[4  + offset], &ave, 2);
     //Accel: X
-    ave = ax / div;
+    ave = ax / cnt;
     memcpy(&motion_val[6  + offset], &ave, 2);
     //Accel: Y
-    ave = ay / div;
+    ave = ay / cnt;
     memcpy(&motion_val[8  + offset], &ave, 2);
     //Accel: Z
-    ave = az / div;
+    ave = az / cnt;
     memcpy(&motion_val[10 + offset], &ave, 2);
     
     gx = 0;
@@ -890,7 +857,8 @@ int BLE_main(void)
     bool has_event;
     uint32_t pin;
     uint16_t average_count_airp=5;
-
+    uint16_t average_count_motion=10;
+    
     state = BLELib_getState();
     has_event = BLELib_hasEvent();
 
@@ -959,16 +927,14 @@ int BLE_main(void)
                     }
                 }
 
-                if ((cnt % 10) == 0) {
-                
-                    //モーションセンサ通知
-                    if (motion_enable_val == 1) {
-                        ble_online_motion_sample();
-                        //ble_online_motion_average(cnt);
+                //モーションセンサ通知
+                if (motion_enable_val == 1) {
+                    ble_online_motion_sample_accumulate();
+                    if ((cnt % average_count_motion) == 0) {
+                        ble_online_motion_average(average_count_motion);
                         ble_online_motion_notify();
                     }
-                }
-                
+                }                
                 
                 //1000msでアップラウンド
                 cnt = (cnt + 1) % 100;
