@@ -121,22 +121,32 @@ BlueNinjaBasic.prototype.readMotionData = function(callback) {
 BlueNinjaBasic.prototype.convertMotionData = function(data, callback) {
 	var offset=0;
 	// Gyro value in [degree/s]
-	var grx = data.readInt16LE(offset)/16.4;offset+=2;
-	var gry = data.readInt16LE(offset)/16.4;offset+=2;
-	var grz = data.readInt16LE(offset)/16.4;offset+=2;
-	console.log(this.localName+' in [deg/s]:'+grx+','+gry+','+grz+'');	
+	var grx = data.readInt16LE(offset);offset+=2;
+	var gry = data.readInt16LE(offset);offset+=2;
+	var grz = data.readInt16LE(offset);offset+=2;
+	// actual Gyro value will be gr{xyz}/16.4 [deg/s]
+	console.log(this.localName+' in [deg/s]:'+grx/16.4+','+gry/16.4+','+grz/16.4+'');	
 	// Accelerometer value in [G]
-	var acx = data.readInt16LE(offset)/2048;offset+=2;
-	var acy = data.readInt16LE(offset)/2048;offset+=2;
-	var acz = data.readInt16LE(offset)/2048;offset+=2;
-	var acG=Math.sqrt(acx*acx+acy*acy+acz*acz);
-	console.log(this.localName+' in [G]:'+acx+','+acy+','+acz+','+acG);
-    //udpSend(this.localName+' in [G]:'+acx+','+acy+','+acz+'');
+	var acx = data.readInt16LE(offset);offset+=2;
+	var acy = data.readInt16LE(offset);offset+=2;
+	var acz = data.readInt16LE(offset);offset+=2;
+	// actual aceleration value will be ac{xyz}/2048 [G]
+	console.log(this.localName+' in [G]:'+acx/2048+','+acy/2048+','+acz/2048);
        // Magneto value
 	var mgx = data.readUInt16LE(offset);offset+=2;
+	if(mgx>0xffff/2){
+	    mgx=mgx-0xffff;
+	}
 	var mgy = data.readUInt16LE(offset);offset+=2;
+	if(mgy>0xffff/2){
+	    mgy=mgy-0xffff;
+	}
 	var mgz = data.readUInt16LE(offset);offset+=2;
+	if(mgz>0xffff/2){
+	    mgz=mgz-0xffff;
+	}
 	console.log(this.localName+' in [?]:'+mgx+','+mgy+','+mgz+'');	
+    udpSend('MTN,'+acx+','+acy+','+acz+','+grx+','+gry+','+grz+','+mgx+','+mgy+','+mgz+'\n');
 };
 
 //=========================================================
@@ -183,11 +193,13 @@ BlueNinjaBasic.prototype.convertAirPData = function(data, callback) {
 	var offset=0;
 	// Temparature value in [0.01digC]
 	var temp = data.readInt16LE(offset);offset+=2;
-	console.log(this.localName+' in [0.01digC]:'+temp+':'+temp*0.01);	
+	/// actual temparature will be temp*0.01[C]
+	console.log(this.localName+' in [digC]:'+temp*0.01);	
 	//Air Pressure value in [1/256Pa]
 	var airP = data.readInt32LE(offset);offset+=2;
-	console.log(this.localName+' in [1/256Pa]:'+airP+':'+airP/256);
-
+	// actual air pressure will be airP/256[Pa]
+	console.log(this.localName+' in [Pa]:'+airP/256);
+    udpSend('AIR,'+temp+','+airP+'\n');
 };
 
 ///////////////////////////////////////////////////////////////////////////
@@ -239,6 +251,16 @@ myDevice_R.discover(function(device) {
     	});
 
     });
+});
+
+process.on('SIGINT', function() {
+    console.log("Caught interrupt signal");
+    if(myDevice_R.is){
+    device.on('disconnect', function() {
+  		console.log('disconnected! R');
+    	process.exit(0);
+ 	});
+}
 });
 
 
