@@ -29,9 +29,9 @@ class AirDataWindow extends PApplet {
 
   int NUM=2;
   String[] label={"TEMP", "AIRP"};
-float baseTemp=30;  /// Base value for sensor data(Temparature in degC)
+float baseTemp=28;  /// Base value for sensor data(Temparature in degC)
   float tempRange=5;  /// Sensor data range
-  float basePress=995;  /// Base value for sensor data(Air Pressure in hPa)
+  float basePress=985;  /// Base value for sensor data(Air Pressure in hPa)
   float pressRange=2;  /// Sensor data range
   
   float[] sensors_max={baseTemp+tempRange/2.0, basePress+pressRange/2.0};
@@ -56,6 +56,7 @@ float baseTemp=30;  /// Base value for sensor data(Temparature in degC)
   }
 
   void draw() {
+    println(airData[0],airData[1]);
     // センサーの数だけ、グラフをプロット  
     for (int i = 0; i < NUM; i++) {
 
