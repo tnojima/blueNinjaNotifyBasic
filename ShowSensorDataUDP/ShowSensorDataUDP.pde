@@ -16,7 +16,11 @@ String log;
 
 float[] accData=new float[3];
 float[] gyroData=new float[3];
+///////////////////////
+/// Magnet Data Related 
+///////////////////////
 int[] mgData=new int[3];
+MagDataWindow mag;
 
 ///////////////////////
 /// Air Data Related 
@@ -60,6 +64,7 @@ void setup() {
   initGraph();
   
    air = new AirDataWindow(this);
+   mag = new MagDataWindow(this);
 }
 
 void draw() {
