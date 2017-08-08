@@ -10,11 +10,16 @@ import processing.serial.*;
 import hypermedia.net.*;
 final int PORT = 8080;
 
-int NUM = 11; //センサーの数
 UDP udp;
 String log;
 
+
+///////////////////////
+/// Magnet Data Related 
+///////////////////////
 float[] accData=new float[3];
+AccDataWindow acc;
+
 ///////////////////////
 /// Magnet Data Related 
 ///////////////////////
@@ -33,14 +38,6 @@ MagDataWindow mag;
 float[] airData=new float[2];
 AirDataWindow air;
 
-int[] sensors_min= {-16, -16, -16, -2000, -2000, -2000, -500, -500, -500, 0, 0};
-int[] sensors_max={  16, 16, 16, 2000, 2000, 2000, 500, 500, 500, 10, 2};
-float[] prevTx=new float[NUM];
-float[] prevTy=new float[NUM];
-String[] label={"GX", "GY", "GZ", "GRX", "GRY", "GRZ", "MGX", "MGY", "MGZ", "TEMP", "AIRP"};
-
-int cnt; //カウンター
-
 // グラフの線の色を格納
 color[] col = {
   color(255, 127, 31),
@@ -58,76 +55,20 @@ color[] col = {
 };
 
 void setup() {
-  //画面設定
-  size(1024, 768);
-  frameRate(60);
 
   udp = new UDP(this, PORT);
   udp.listen(true);
 
-  //グラフ初期化
-  initGraph();
   
    air = new AirDataWindow(this);
    mag = new MagDataWindow(this);
    gyro = new GyroDataWindow (this);
+   acc = new AccDataWindow (this);
 
 }
 
 void draw() {
-  // センサーの数だけ、グラフをプロット  
-  float data=0;
-  for (int i = 0; i < NUM; i++) {
-    if (i<3) {
-      data=accData[i];
-    }else if (i<6) {
-      data=gyroData[i-3];
-    } else if (i<9) {
-      data=float(mgData[i-6]);
-    } else if (i<11) {
-      data=airData[i-9];
-    }
-
-    float tx = map(cnt, 0, width, 0, width);
-    float ty = map(data, sensors_min[i], sensors_max[i], height/NUM, 0)+height/NUM*i;
-    fill(0);
-    text(label[i], 0, height/NUM*(i+0.5));
-    text(data, 30, height/NUM*(i+0.5));
-
-    //ellipse(tx, ty, 1, 1);
-    strokeWeight(3);
-    stroke(0, 0, 0);
-    line(cnt+5, 0, cnt+5, height);
-    strokeWeight(1);
-    stroke(255, 255, 255);
-    line(cnt+1, 0, cnt+1, height);
-
-    stroke(col[i]);
-    line(prevTx[i], prevTy[i], tx, ty);
-    prevTx[i]=tx;
-    prevTy[i]=ty;
-  }
-  // 画面の右端まで描画したら再初期化
-  if (cnt > width) {
-    //initGraph();
-    cnt=0;
-    for (int i=0; i<NUM; i++) {
-      prevTx[i]=0;
-      prevTy[i]=0;
-    }
-  }
-  //カウンタアップ
-  cnt++;
-}
-
-//グラフの初期化
-void initGraph() {
-  background(255);
-  noStroke();
-  cnt = 0;
-  // グラフ描画の線の色を定義
- 
-}
+ }
 
 
 void receive(byte data[]) {

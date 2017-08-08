@@ -1,7 +1,7 @@
-class GyroDataWindow extends PApplet {
+class AccDataWindow extends PApplet {
   PApplet parent;
   
-  GyroDataWindow(PApplet _parent) {
+  AccDataWindow(PApplet _parent) {
     super();
     // set parent
     this.parent = _parent;
@@ -27,13 +27,13 @@ void settings() {
   }
 
   int NUM=3;
-  String[] label={ "GRX", "GRY", "GRZ" };
-  float baseGR=0;              /// Base value for sensor data(Gyro deg/s)
-  float GRRange=4000;  /// Sensor data range
+  String[] label={"GX", "GY", "GZ" };
+  float baseG=0;              /// Base value for sensor data(Acceleration G)
+  float GRange=32;  /// Sensor data range
 
   /// the size of this min/max array  must be the same as "NUM"
-  float[] sensors_max={baseGR+GRRange/2.0, baseGR+GRRange/2.0, baseGR+GRRange/2.0};
-  float[] sensors_min={baseGR-GRRange/2.0, baseGR-GRRange/2.0, baseGR-GRRange/2.0};
+  float[] sensors_max={baseG+GRange/2.0, baseG+GRange/2.0, baseG+GRange/2.0};
+  float[] sensors_min={baseG-GRange/2.0, baseG-GRange/2.0, baseG-GRange/2.0};
 
   float[] prevTx=new float[NUM];
   float[] prevTy=new float[NUM];
@@ -58,12 +58,12 @@ void settings() {
     for (int i = 0; i < NUM; i++) {
 
       float tx = map(cnt, 0, width, 0, width);
-      float ty = map(gyroData[i], sensors_min[i], sensors_max[i], height/NUM, 0)+height/NUM*i;
+      float ty = map(accData[i], sensors_min[i], sensors_max[i], height/NUM, 0)+height/NUM*i;
 
       //Draw data labels
       fill(0);
       text(label[i], 0, height/NUM*(i+0.5));
-      text(gyroData[i], 30, height/NUM*(i+0.5));
+      text(accData[i], 30, height/NUM*(i+0.5));
 
       // Draw moving clear line
       strokeWeight(3);
