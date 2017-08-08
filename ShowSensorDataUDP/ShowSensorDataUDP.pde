@@ -15,7 +15,12 @@ UDP udp;
 String log;
 
 float[] accData=new float[3];
+///////////////////////
+/// Magnet Data Related 
+///////////////////////
 float[] gyroData=new float[3];
+GyroDataWindow gyro;
+
 ///////////////////////
 /// Magnet Data Related 
 ///////////////////////
@@ -65,6 +70,8 @@ void setup() {
   
    air = new AirDataWindow(this);
    mag = new MagDataWindow(this);
+   gyro = new GyroDataWindow (this);
+
 }
 
 void draw() {
