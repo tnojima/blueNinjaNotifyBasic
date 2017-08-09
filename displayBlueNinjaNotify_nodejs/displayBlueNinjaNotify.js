@@ -61,13 +61,13 @@ var UUID_CLIENT_CHARACTERISTIC_CONFIG = '0000290200001000800000805f9b34fb';
 var UUID_SERCVICE_AIRP= '00060000672711e5988ef07959ddcdfb';
 var UUID_CHARACTERISTIC_AIRPVALUE = '00060001672711e5988ef07959ddcdfb';
 
-//BlueNinja AirPressure sensor Service (If you continue using BlueNinja, not necessary to edit here)
+//BlueNinja AD Converter Service (If you continue using BlueNinja, not necessary to edit here)
 var UUID_SERCVICE_ADC= '00040000672711e5988ef07959ddcdfb';
 var UUID_CHARACTERISTIC_ADCVALUE = '00040001672711e5988ef07959ddcdfb';
 
-//BlueNinja AirPressure sensor Service (If you continue using BlueNinja, not necessary to edit here)
+//BlueNinja GPIO sensor Service (If you continue using BlueNinja, not necessary to edit here)
 var UUID_SERCVICE_GPIO= '00010000672711e5988ef07959ddcdfb';
-var UUID_CHARACTERISTIC_ADCVALUE = '00010001672711e5988ef07959ddcdfb';
+var UUID_CHARACTERISTIC_GPIOVALUE = '00010001672711e5988ef07959ddcdfb';
 
 //////////////////////////////////////////////////////////////////////////
 // Open UDP socket, defines data transfer function
@@ -239,8 +239,6 @@ BlueNinjaBasic.prototype.readADCData = function(callback) {
   }.bind(this));
 };
 
-
-
 /// data format transformation
 BlueNinjaBasic.prototype.convertADCData = function(data, callback) {
 		var offset=0;
@@ -331,9 +329,6 @@ myDevice_R.discover(function(device) {
     	process.exit(0);
  	});
  	
- 	device.on('motionChange', function(data){
- 		console.log("update measurement R:"+data);
- 	});
  	
     device.connectAndSetUp(function(callback) {
     	console.log('connectAndSetUp R');
