@@ -25,6 +25,7 @@ LIBS    =
 #Include dir, Source files.
 INCLUDE = -IRTE -IRTE/Device/TZ1001MBG
 SOURCES = src/main.c src/ble.c src/pwm_out.c
+SOURCES+=$(DFP_PATH)/RTE_Driver/ADCC12_TZ10xx.c
 include *.mk
 
 #Objects

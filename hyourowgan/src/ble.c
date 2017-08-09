@@ -20,6 +20,18 @@ distributed under the License is distributed on an "AS IS" BASIS,
 WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
+
+See this page to get basic information
+https://github.com/cerevo/hyourowgan/wiki/BLE_Profile
+
+If BLELIB_ERROR_BUSY has occured, change following value or disable some notify to reduce number of calling BLE API
+    uint16_t average_count_airp=5;
+    uint16_t average_count_motion=10;
+    uint16_t count_adc=5;
+    uint16_t count_gpio_in=10;
+
+#define BLELIB_ERROR_BUSY				(-4)			Cannot do API because of too many API call
+
 */
 
 #include <stdio.h>
@@ -33,6 +45,7 @@ limitations under the License.
 
 #include "TZ01_system.h"
 #include "TZ01_console.h"
+#include "ADCC12_TZ10xx.h"
 #include "MPU-9250.h"
 #include "BMP280.h"
 #include "pwm_out.h"
@@ -48,6 +61,7 @@ static uint16_t current_mtu = 23;
 extern TZ10XX_DRIVER_PMU  Driver_PMU;
 extern TZ10XX_DRIVER_RNG  Driver_RNG;
 extern TZ10XX_DRIVER_GPIO Driver_GPIO;
+extern TZ10XX_DRIVER_ADCC12 Driver_ADCC12;
 
 static uint8_t msg[80];
 
@@ -77,7 +91,9 @@ enum {
     GATT_UID_DI_MODEL_STRING,
     /* BlueNinja GPIO Service */
     GATT_UID_GPIO_SERVICE,
-    GATT_UID_GPIO,
+    GATT_UID_GPIO_READ,
+    GATT_UID_GPIO_WRITE,
+    GATT_UID_GPIO_DESC,
     /* BlueNinja PWM Service */
     GATT_UID_PWM_SERVICE,
     GATT_UID_PWM_0_ONOFF,
@@ -91,9 +107,9 @@ enum {
     GATT_UID_UART_SERVICE,
     */
     /* BlueNinja ADC Service */
-    /*
     GATT_UID_ADC_SERVICE,
-    */
+    GATT_UID_ADC,
+    GATT_UID_ADC_DESC,
     /* BlueNinja Motion sensor Service */
     GATT_UID_MOTION_SERVICE,
     GATT_UID_MOTION,
@@ -104,9 +120,9 @@ enum {
     GATT_UID_AIRP_DESC,
     
     /* BlueNinja Battry charger Service */
-    /*
     GATT_UID_BATT_SERVICE,
-    */
+    GATT_UID_BATT,
+    GATT_UID_BATT_DESC,
 };
 
 /* GAP */
@@ -170,18 +186,48 @@ const BLELib_Service di_service = {
 };
 
 /* BlueNinja GPIO Service */
-static uint8_t gpio_val;
-//GPIO
-const BLELib_Characteristics gpio_char = {
-    GATT_UID_GPIO, 0x988ef07959ddcdfb, 0x00010001672711e5, BLELIB_UUID_128,
-    BLELIB_PROPERTY_READ | BLELIB_PROPERTY_WRITE,
+static uint8_t gpio_read_val;
+static uint8_t gpio_write_val;
+static uint16_t gpio_enable_val;
+
+//GPIO DATA READ CHARACTERISTICS
+const BLELib_Descriptor gpio_desc = {
+    GATT_UID_GPIO_DESC, 0x2902, 0, BLELIB_UUID_16,
     BLELIB_PERMISSION_READ | BLELIB_PERMISSION_WRITE,
-    &gpio_val, 1,
+    (uint8_t *)&gpio_enable_val, sizeof(gpio_enable_val)
+};
+const BLELib_Descriptor *const gpio_descs[] = { &gpio_desc };
+const BLELib_Characteristics gpio_read_char = {
+    GATT_UID_GPIO_READ, 0x988ef07959ddcdfb, 0x00010001672711e5, BLELIB_UUID_128,
+    BLELIB_PROPERTY_NOTIFY,
+    BLELIB_PERMISSION_READ,
+    (uint8_t *)&gpio_read_val, sizeof(gpio_read_val),
+    gpio_descs, 1
+};
+/*
+//GPIO DATA WRITE CHARACTERISTICS
+const BLELib_Characteristics gpio_srite_char = {
+    GATT_UID_GPIO_WRITE, 0x988ef07959ddcdfb, 0x00010002672711e5, BLELIB_UUID_128,
+    BLELIB_PROPERTY_WRITE,
+    BLELIB_PERMISSION_READ | BLELIB_PERMISSION_WRITE,
+    (uint8_t *)&gpio_write_val, sizeof(gpio_write_val),
     NULL, 0
 };
+
+
 //Service
 const BLELib_Characteristics *const gpio_characteristics[] = {
-    &gpio_char
+    &gpio_read_char, &gpio_srite_char
+};
+const BLELib_Service gpio_service = {
+    GATT_UID_GPIO_SERVICE, 0x988ef07959ddcdfb, 0x00010000672711e5, BLELIB_UUID_128,
+    true, NULL, 0,
+    gpio_characteristics, 2
+};
+*/
+//Service
+const BLELib_Characteristics *const gpio_characteristics[] = {
+    &gpio_read_char
 };
 const BLELib_Service gpio_service = {
     GATT_UID_GPIO_SERVICE, 0x988ef07959ddcdfb, 0x00010000672711e5, BLELIB_UUID_128,
@@ -260,6 +306,31 @@ const BLELib_Service pwm_service = {
 /* BlueNinja UART Serivece */
 
 /* BlueNinja ADC Service */
+static uint16_t adc_enable_val;
+static uint16_t adc_val[4];
+//ADC
+const BLELib_Descriptor adc_desc = {
+    GATT_UID_ADC_DESC, 0x2902, 0, BLELIB_UUID_16,
+    BLELIB_PERMISSION_READ | BLELIB_PERMISSION_WRITE,
+    (uint8_t *)&adc_enable_val, sizeof(adc_enable_val)
+};
+const BLELib_Descriptor *const adc_descs[] = { &adc_desc };
+const BLELib_Characteristics adc_char = {
+    GATT_UID_ADC, 0x988ef07959ddcdfb, 0x00040001672711e5, BLELIB_UUID_128,
+    BLELIB_PROPERTY_NOTIFY,
+    BLELIB_PERMISSION_READ,
+    (uint8_t *)&adc_val, sizeof(adc_val),
+    adc_descs, 1
+};
+//Service
+const BLELib_Characteristics *const adc_characteristics[] = {
+    &adc_char
+};
+const BLELib_Service adc_service = {
+    GATT_UID_ADC_SERVICE, 0x988ef07959ddcdfb, 0x00040000672711e5, BLELIB_UUID_128,
+    true, NULL, 0,
+    adc_characteristics, 1
+};
 
 /* BlueNinja Motion sensor Service */
 static uint16_t motion_enable_val;
@@ -319,7 +390,7 @@ const BLELib_Service airp_service = {
 
 /* Service list */
 const BLELib_Service *const hrgn_service_list[] = {
-    &gap_service, &di_service, &gpio_service, &pwm_service, &motion_service, &airp_service
+    &gap_service, &di_service, &gpio_service, &pwm_service, &motion_service, &airp_service, &adc_service
 };
 
 /*- INDICATION data -*/
@@ -435,7 +506,7 @@ BLELib_RespForDemand writeinDemandCb(const uint8_t unique_id, const uint8_t *con
     BLELib_RespForDemand ret = BLELIB_DEMAND_REJECT;
     
     switch (unique_id) {
-    case GATT_UID_GPIO:
+    case GATT_UID_GPIO_WRITE:
         //GPIO20
         pin = (value[0] & 0x10) ? 1 : 0;
         Driver_GPIO.WritePin(20, pin);
@@ -449,11 +520,11 @@ BLELib_RespForDemand writeinDemandCb(const uint8_t unique_id, const uint8_t *con
         pin = (value[0] & 0x80) ? 1 : 0;
         Driver_GPIO.WritePin(23, pin);
         
-        if ((value[0] & 0xf0) != (gpio_val & 0xf0)) {
+        if ((value[0] & 0xf0) != (gpio_write_val & 0xf0)) {
             //変化あったので反映
-            gpio_val &= 0x0f;
-            gpio_val |= (value[0] & 0xf0);
-            BLELib_updateValue(unique_id, &gpio_val, sizeof(gpio_val));
+            gpio_write_val &= 0x0f;
+            gpio_write_val |= (value[0] & 0xf0);
+            BLELib_updateValue(unique_id, &gpio_write_val, sizeof(gpio_write_val));
         }
         ret = BLELIB_DEMAND_ACCEPT;
         break;
@@ -555,6 +626,16 @@ BLELib_RespForDemand writeinDemandCb(const uint8_t unique_id, const uint8_t *con
         airp_enable_val = value[0] | (value[1] << 8);
         ret = BLELIB_DEMAND_ACCEPT;
         break;
+    case GATT_UID_ADC_DESC:
+        adc_enable_val = value[0] | (value[1] << 8);
+        ret = BLELIB_DEMAND_ACCEPT;
+        break;
+    case GATT_UID_GPIO_DESC:
+        gpio_enable_val = value[0] | (value[1] << 8);
+        ret = BLELIB_DEMAND_ACCEPT;
+        sprintf(msg, "%dGATT_UID_GPIO_DESC\r\n", gpio_enable_val);
+	    TZ01_console_puts(msg);
+        break;
     }
     
     return ret;
@@ -655,7 +736,7 @@ static void ble_online_gpio_update_val(void)
     uint32_t pin;
     uint8_t di;
     
-    di = gpio_val;
+    di = gpio_read_val;
     if (hist_di16 == 0x00) {
         di &= ~0x01;
     } else if (hist_di16 == 0x0f) {
@@ -676,12 +757,77 @@ static void ble_online_gpio_update_val(void)
     } else {
         di |= 0x08;
     }
+
+//    if ((gpio_val & 0x0f) != di) {
+        //変化あったので反映
+//        gpio_val &= 0xf0;
+//        gpio_val |= di;
+       //int ret =  BLELib_updateValue(GATT_UID_GPIO_READ, &gpio_read_val, sizeof(gpio_read_val));
+//    }
+     
+    int ret = BLELib_notifyValue(GATT_UID_GPIO_READ, &gpio_read_val, sizeof(gpio_read_val));
+    if (ret != BLELIB_OK) {
+        sprintf(msg, "BLERET: %d, GPIO:%x\r\n", ret,gpio_read_val);
+    TZ01_console_puts(msg);
+    }
+}
+
+////===================================================
+// ADCONVERTER 
+////===================================================
+
+
+void init_adcc12(void)
+{
+    /* ADCC12へ供給するクロックの設定 */
+    //クロックソースの選択
+    Driver_PMU.SelectClockSource(PMU_CSM_ADCC12, PMU_CLOCK_SOURCE_SIOSC4M);
+    //プリスケーラの設定
+    Driver_PMU.SetPrescaler(PMU_CD_ADCC12, 1);
+
+    /* ADCC12ドライバの初期化 */
+    Driver_ADCC12.Initialize(NULL, 0);
+
+    Driver_ADCC12.SetScanMode(ADCC12_SCAN_MODE_CYCLIC, ADCC12_CHANNEL_0);
+    Driver_ADCC12.SetScanMode(ADCC12_SCAN_MODE_CYCLIC, ADCC12_CHANNEL_1);
+    Driver_ADCC12.SetScanMode(ADCC12_SCAN_MODE_CYCLIC, ADCC12_CHANNEL_2);
+    Driver_ADCC12.SetScanMode(ADCC12_SCAN_MODE_CYCLIC, ADCC12_CHANNEL_3);
+
+    Driver_ADCC12.SetDataFormat(ADCC12_CHANNEL_0, ADCC12_UNSIGNED);
+    Driver_ADCC12.SetDataFormat(ADCC12_CHANNEL_1, ADCC12_UNSIGNED);
+    Driver_ADCC12.SetDataFormat(ADCC12_CHANNEL_2, ADCC12_UNSIGNED);
+    Driver_ADCC12.SetDataFormat(ADCC12_CHANNEL_3, ADCC12_UNSIGNED);
+
+    Driver_ADCC12.SetComparison(ADCC12_CMP_DATA_0, 0x00, ADCC12_CMP_NO_COMPARISON, ADCC12_CHANNEL_0);
+    Driver_ADCC12.SetComparison(ADCC12_CMP_DATA_0, 0x00, ADCC12_CMP_NO_COMPARISON, ADCC12_CHANNEL_1);
+    Driver_ADCC12.SetComparison(ADCC12_CMP_DATA_0, 0x00, ADCC12_CMP_NO_COMPARISON, ADCC12_CHANNEL_2);
+    Driver_ADCC12.SetComparison(ADCC12_CMP_DATA_0, 0x00, ADCC12_CMP_NO_COMPARISON, ADCC12_CHANNEL_3);
     
-    if ((gpio_val & 0x0f) != di) {
-        //���͂ɕύX����
-        gpio_val &= 0xf0;
-        gpio_val |= di;
-        BLELib_updateValue(GATT_UID_GPIO, &gpio_val, sizeof(gpio_val));
+    Driver_ADCC12.SetFIFOOverwrite(ADCC12_FIFO_MODE_STREAM);
+    Driver_ADCC12.SetSamplingPeriod(ADCC12_SAMPLING_PERIOD_64MS);
+
+    Driver_ADCC12.PowerControl(ARM_POWER_FULL);
+    sprintf(
+       msg, "ADC INITIALIZED\r\n");
+    TZ01_console_puts(msg);
+}
+
+static void ble_online_adc_sample_notify(void)
+{
+    int ret;
+    //Ch0
+    Driver_ADCC12.ReadData(ADCC12_CHANNEL_0, &adc_val[0]);
+    //Ch1
+    Driver_ADCC12.ReadData(ADCC12_CHANNEL_1, &adc_val[1]);
+    //Ch2
+    Driver_ADCC12.ReadData(ADCC12_CHANNEL_2, &adc_val[2]);
+    //Ch3
+    Driver_ADCC12.ReadData(ADCC12_CHANNEL_3, &adc_val[3]);
+
+    ret = BLELib_notifyValue(GATT_UID_ADC, adc_val, sizeof(adc_val));
+    if (ret != BLELIB_OK) {
+        sprintf(msg, "GATT_UID_ADC: Notify failed. ret=%d\r\n", ret);
+        TZ01_console_puts(msg);
     }
 }
 
@@ -846,6 +992,7 @@ static void ble_online_motion_notify(void)
 }
 
 static bool is_adv = false;
+static bool is_online=false;
 static bool is_reg = false;
 static uint8_t led_blink = 0;
 static uint8_t cnt = 0;
@@ -858,6 +1005,8 @@ int BLE_main(void)
     uint32_t pin;
     uint16_t average_count_airp=5;
     uint16_t average_count_motion=10;
+    uint16_t count_adc=5;
+    uint16_t count_gpio_in=10;
     
     state = BLELib_getState();
     has_event = BLELib_hasEvent();
@@ -866,6 +1015,7 @@ int BLE_main(void)
         case BLELIB_STATE_UNINITIALIZED:
             is_reg = false;
             is_adv = false;
+            is_online=false;
             TZ01_console_puts("BLELIB_STATE_UNINITIALIZED\r\n");
             ret = BLELib_initialize(hrgn_bdaddr, BLELIB_BAUDRATE_2304, &tz01_common_callbacks, &tz01_server_callbacks, NULL, NULL);
             if (ret != BLELIB_OK) {
@@ -877,7 +1027,7 @@ int BLE_main(void)
             if (is_reg == false) {
                 TZ01_console_puts("BLELIB_STATE_INITIALIZED\r\n");
                 BLELib_setLowPowerMode(BLELIB_LOWPOWER_ON);
-                if (BLELib_registerService(hrgn_service_list, 6) == BLELIB_OK) {
+                if (BLELib_registerService(hrgn_service_list, 7) == BLELIB_OK) {
                     is_reg = true;
                 } else {
                     return -1;  //Register failed
@@ -899,6 +1049,10 @@ int BLE_main(void)
             is_adv = false;
             break;
         case BLELIB_STATE_ONLINE:
+            if(is_online == false){
+                TZ01_console_puts("BLELIB_STATE_ONLINE\r\n");
+                is_online=true;
+            }
             if (TZ01_system_tick_check_timeout(USRTICK_NO_BLE_MAIN)) {
                 TZ01_system_tick_start(USRTICK_NO_BLE_MAIN, 10);
                 
@@ -908,16 +1062,20 @@ int BLE_main(void)
                     Driver_GPIO.WritePin(11, led_blink);
                 }
                 
-                //GPIO入力サンプリング(50ms毎)
-                if ((cnt % 5) == 0) {
-                    di_state_update();
+                //GPIO入力サンプリング/通知(count_gpio_in*10ms毎)
+                if (gpio_enable_val == 1) {
+                    if ((cnt % count_gpio_in) == 0) {
+                        di_state_update();
+                        ble_online_gpio_update_val();
+                    }
                 }
                 
-                //GPIO入力通知(100, 300, 500, 700, 900ms)
-                if ((cnt % 20) == 10) {
-                    ble_online_gpio_update_val();
-                }
-                
+                //ADC通知
+                if (adc_enable_val == 1) {
+                    if ((cnt % count_adc) == 0) {
+                        ble_online_adc_sample_notify();
+                    }
+                }   
                 //気圧センサー読み取り(毎回)/通知(average_count_airp*10ms)
                 if (airp_enable_val == 1) {
                     ble_online_airp_sample_accumulate();
@@ -977,8 +1135,9 @@ static void init_io_state(void)
 {
     /* Initialize values. */
     //GPIO
-    gpio_val = 0;
-    BLELib_updateValue(GATT_UID_GPIO, &gpio_val, 1);
+    gpio_read_val = 0;
+    gpio_write_val = 0;
+    BLELib_updateValue(GATT_UID_GPIO_WRITE, &gpio_write_val, 1);
     
     //PWM0
     pwm_0_onoff_val = 0;
@@ -1000,5 +1159,14 @@ static void init_io_state(void)
     //Airpressure sensor
     airp_enable_val = 0;
     memset(airp_val, 0, sizeof(airp_val));
+    
+    init_adcc12();  //12bit ADCの初期化
+    memset(adc_val, 0, sizeof(adc_val));
+    
+    gpio_read_val=0x00;
+    gpio_write_val=0x00;
+    gpio_enable_val=0;
+
+    Driver_ADCC12.Start();
 }
 
