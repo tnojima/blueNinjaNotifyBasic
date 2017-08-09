@@ -751,6 +751,9 @@ void init_adcc12(void)
     Driver_ADCC12.SetSamplingPeriod(ADCC12_SAMPLING_PERIOD_64MS);
 
     Driver_ADCC12.PowerControl(ARM_POWER_FULL);
+    sprintf(
+       msg, "ADC INITIALIZED\r\n");
+    TZ01_console_puts(msg);
 }
 
 static void ble_online_adc_sample_notify(void)
@@ -938,6 +941,7 @@ static void ble_online_motion_notify(void)
 }
 
 static bool is_adv = false;
+static bool is_online=false;
 static bool is_reg = false;
 static uint8_t led_blink = 0;
 static uint8_t cnt = 0;
@@ -959,6 +963,7 @@ int BLE_main(void)
         case BLELIB_STATE_UNINITIALIZED:
             is_reg = false;
             is_adv = false;
+            is_online=false;
             TZ01_console_puts("BLELIB_STATE_UNINITIALIZED\r\n");
             ret = BLELib_initialize(hrgn_bdaddr, BLELIB_BAUDRATE_2304, &tz01_common_callbacks, &tz01_server_callbacks, NULL, NULL);
             if (ret != BLELIB_OK) {
@@ -992,6 +997,10 @@ int BLE_main(void)
             is_adv = false;
             break;
         case BLELIB_STATE_ONLINE:
+            if(is_online == false){
+                TZ01_console_puts("BLELIB_STATE_ONLINE\r\n");
+                is_online=true;
+            }
             if (TZ01_system_tick_check_timeout(USRTICK_NO_BLE_MAIN)) {
                 TZ01_system_tick_start(USRTICK_NO_BLE_MAIN, 10);
                 
