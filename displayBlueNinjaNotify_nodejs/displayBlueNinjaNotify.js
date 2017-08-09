@@ -67,7 +67,8 @@ var UUID_CHARACTERISTIC_ADCVALUE = '00040001672711e5988ef07959ddcdfb';
 
 //BlueNinja GPIO sensor Service (If you continue using BlueNinja, not necessary to edit here)
 var UUID_SERCVICE_GPIO= '00010000672711e5988ef07959ddcdfb';
-var UUID_CHARACTERISTIC_GPIOVALUE = '00010001672711e5988ef07959ddcdfb';
+var UUID_CHARACTERISTIC_GPIOVALUE_READ = '00010001672711e5988ef07959ddcdfb';
+var UUID_CHARACTERISTIC_GPIOVALUE_WRITE = '00010002672711e5988ef07959ddcdfb';
 
 //////////////////////////////////////////////////////////////////////////
 // Open UDP socket, defines data transfer function
@@ -258,39 +259,56 @@ BlueNinjaBasic.prototype.writeGPIOControllPoint = function(data, callback) {
 /// enable notify
 BlueNinjaBasic.prototype.notifyGPIOMeasument = function(callback) {
 	  this.onGPIOChangeBinded           = this.onGPIOChange.bind(this);
-  this.notifyCharacteristic(UUID_SERCVICE_GPIO, UUID_CHARACTERISTIC_GPIOVALUE, true, this.onGPIOChangeBinded, callback);
+  this.notifyCharacteristic(UUID_SERCVICE_GPIO, UUID_CHARACTERISTIC_GPIOVALUE_READ, true, this.onGPIOChangeBinded, callback);
 };
 
 /// disalbe notify
 BlueNinjaBasic.prototype.unnotifyGPIOMeasument = function(callback) {
-  this.notifyCharacteristic(UUID_SERCVICE_GPIO, UUID_CHARACTERISTIC_GPIOVALUE, false, this.onGPIOChangeBinded, callback);
+  this.notifyCharacteristic(UUID_SERCVICE_GPIO, UUID_CHARACTERISTIC_GPIOVALUE_READ, false, this.onGPIOChangeBinded, callback);
 };
 
 /// get data when the data has changed
 BlueNinjaBasic.prototype.onGPIOChange = function(data) {
-  this.convertGPIOData(data, function(counter) {
+  this.convertReceivedGPIOData(data, function(counter) {
     this.emit('GPIOChange', counter);
   }.bind(this));
 };
 
 /// read the measured data
 BlueNinjaBasic.prototype.readGPIOData = function(callback) {
-  this.readDataCharacteristic(UUID_SERCVICE_GPIO, UUID_CHARACTERISTIC_GPIOVALUE, function(error, data) {
+  this.readDataCharacteristic(UUID_SERCVICE_GPIO, UUID_CHARACTERISTIC_GPIOVALUE_READ, function(error, data) {
     if (error) {
       return callback(error);
     }
 
-    this.convertGPIOData(data, function(counter) {
+    this.convertReceivedGPIOData(data, function(counter) {
       callback(null, counter);
     });
   }.bind(this));
 };
 
-
-
 /// data format transformation
-BlueNinjaBasic.prototype.convertGPIOData = function(data, callback) {
+BlueNinjaBasic.prototype.convertReceivedGPIOData = function(data, callback) {
+	var gpio_val = data.readUInt8(0);
+	var gpio_16=gpio_val&0x01;gpio_val = gpio_val>>1;
+	var gpio_17=gpio_val&0x01;gpio_val = gpio_val>>1;
+	var gpio_18=gpio_val&0x01;gpio_val = gpio_val>>1;
+	var gpio_19=gpio_val&0x01;gpio_val = gpio_val>>1;
+	console.log(this.localName+' in [GPIO_in]:'+gpio_16+':'+gpio_17+':'+gpio_18+':'+gpio_19);
 
+};
+var gpio_20, gpio_21, gpio_22, gpio_23;
+/// data format transformation
+BlueNinjaBasic.prototype.convertSendingGPIOData = function(data, callback) {
+    var gpio_send_val=0x00;
+    gpio_send_val += gpio_20; gpio_send_val<<1;
+    gpio_send_val += gpio_21; gpio_send_val<<1;
+    gpio_send_val += gpio_22; gpio_send_val<<1;
+    gpio_send_val += gpio_23;
+    gpio_send_val=(gpio_send_val << 4)&0xf0;
+    
+	data.writeUInt8(gpio_send_val);
+	console.log(this.localName+' in [GPIO_out]:'+gpio_send_val+':'+gpio_20+':'+gpio_21+':'+gpio_22+':'+gpio_23);
 
 };
 
@@ -339,6 +357,9 @@ myDevice_R.discover(function(device) {
     		console.log('notifyAirP');
     	});
     	device.notifyADCMeasument(function(counter){
+    		console.log('notifyADC');
+    	});
+    	device.notifyGPIOMeasument(function(counter){
     		console.log('notifyADC');
     	});
 
