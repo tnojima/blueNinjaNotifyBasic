@@ -773,11 +773,6 @@ static void ble_online_adc_sample_notify(void)
         sprintf(msg, "GATT_UID_ADC: Notify failed. ret=%d\r\n", ret);
         TZ01_console_puts(msg);
     }
-    sprintf(
-       msg, "ADCC12: CH0=%d CH1=%d CH2=%d CH3=%d\r\n",
-            adc_val[0], adc_val[1], adc_val[2], adc_val[3]
-    );
-    TZ01_console_puts(msg);
 }
 
 ////===================================================
