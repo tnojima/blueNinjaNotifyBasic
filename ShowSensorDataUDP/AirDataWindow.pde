@@ -41,7 +41,6 @@ float baseTemp=28;  /// Base value for sensor data(Temparature in degC)
   float[] prevTy=new float[NUM];
   
   int cnt; //カウンター
-  int FRAME_RATE=60;
 
   void setup() {
     background(255);

@@ -1,7 +1,7 @@
-class AccDataWindow extends PApplet {
+class ADCDataWindow extends PApplet {
   PApplet parent;
   
-  AccDataWindow(PApplet _parent) {
+  ADCDataWindow(PApplet _parent) {
     super();
     // set parent
     this.parent = _parent;
@@ -26,14 +26,14 @@ void settings() {
     size(1024, 768);
   }
 
-  int NUM=3;
-  String[] label={"GX", "GY", "GZ" };
-  float baseG=0;              /// Base value for sensor data(Acceleration G)
-  float GRange=32;  /// Sensor data range
+  int NUM=4;
+  String[] label={"ADC0", "ADC1", "ADC2","ADC3" };
+  float baseADC=512;              /// Base value for sensor data(Acceleration G)
+  float ADCrange=1024;  /// Sensor data range
 
   /// the size of this min/max array  must be the same as "NUM"
-  float[] sensors_max={baseG+GRange/2.0, baseG+GRange/2.0, baseG+GRange/2.0};
-  float[] sensors_min={baseG-GRange/2.0, baseG-GRange/2.0, baseG-GRange/2.0};
+  float[] sensors_max={baseADC+ADCrange/2.0, baseADC+ADCrange/2.0, baseADC+ADCrange/2.0, baseADC+ADCrange/2.0};
+  float[] sensors_min={baseADC-ADCrange/2.0, baseADC-ADCrange/2.0, baseADC-ADCrange/2.0, baseADC-ADCrange/2.0};
 
   float[] prevTx=new float[NUM];
   float[] prevTy=new float[NUM];
@@ -57,12 +57,12 @@ void settings() {
     for (int i = 0; i < NUM; i++) {
 
       float tx = map(cnt, 0, width, 0, width);
-      float ty = map(accData[i], sensors_min[i], sensors_max[i], height/NUM, 0)+height/NUM*i;
+      float ty = map(adcData[i], sensors_min[i], sensors_max[i], height/NUM, 0)+height/NUM*i;
 
       //Draw data labels
       fill(0);
       text(label[i], 0, height/NUM*(i+0.5));
-      text(accData[i], 30, height/NUM*(i+0.5));
+      text(adcData[i], 30, height/NUM*(i+0.5));
 
       // Draw moving clear line
       strokeWeight(3);

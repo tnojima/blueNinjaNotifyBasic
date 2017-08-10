@@ -39,7 +39,6 @@ void settings() {
   float[] prevTy=new float[NUM];
   
   int cnt; //カウンター
-  int FRAME_RATE=60;
 
   void setup() {
     background(255);

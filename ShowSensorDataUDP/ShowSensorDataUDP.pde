@@ -9,9 +9,16 @@
 import processing.serial.*;
 import hypermedia.net.*;
 final int PORT = 8080;
+  int FRAME_RATE=15;
 
 UDP udp;
 String log;
+
+///////////////////////
+/// Magnet Data Related 
+///////////////////////
+int[] adcData=new int[4];
+ADCDataWindow adc;
 
 
 ///////////////////////
@@ -64,6 +71,7 @@ void setup() {
    mag = new MagDataWindow(this);
    gyro = new GyroDataWindow (this);
    acc = new AccDataWindow (this);
+   adc = new ADCDataWindow(this);
 
 }
 
@@ -125,6 +133,12 @@ void receive(byte data[]) {
             airData[dataPoint]=float(int(byteBuf))/256/100;
             dataPoint++;
           }
+        } else if (flag.equals("ADC")) {
+          if (dataPoint==0) {
+            //dataPoint is always 0 
+            adcData[dataPoint]=int(byteBuf);
+            dataPoint++;
+          } 
         }
         byteBuf="";
         prevSeparator=i;

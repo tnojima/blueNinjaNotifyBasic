@@ -260,6 +260,7 @@ BlueNinjaBasic.prototype.convertADCData = function(data, callback) {
 		var adc2 = data.readUInt16LE(offset);offset+=2;
 		var adc3 = data.readUInt16LE(offset);offset+=2;
 		console.log(this.localName+' in [ADC]:'+adc0+':'+adc1+':'+adc2+':'+adc3);
+        udpSend('ADC,'+adc0+','+adc1+','+adc2+','+adc3+'\n');
 };
 
 //=========================================================
@@ -307,7 +308,7 @@ BlueNinjaBasic.prototype.convertReceivedGPIOData = function(data, callback) {
 	var gpio_18=gpio_val&0x01;gpio_val = gpio_val>>1;
 	var gpio_19=gpio_val&0x01;gpio_val = gpio_val>>1;
 	console.log(this.localName+' in [GPIO_in]:'+gpio_16+':'+gpio_17+':'+gpio_18+':'+gpio_19);
-
+    udpSend('DIN,'+gpio_16+','+gpio_17+','+gpio_18+','+gpio_19+'\n');
 };
 var gpio_20, gpio_21, gpio_22, gpio_23;
 /// data format transformation
