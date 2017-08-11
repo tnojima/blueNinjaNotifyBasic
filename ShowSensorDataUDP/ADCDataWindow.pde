@@ -28,8 +28,8 @@ void settings() {
 
   int NUM=4;
   String[] label={"ADC0", "ADC1", "ADC2","ADC3" };
-  float baseADC=512;              /// Base value for sensor data(Acceleration G)
-  float ADCrange=1024;  /// Sensor data range
+  float baseADC=2048;              /// Base value for sensor data(Acceleration G)
+  float ADCrange=4096;  /// Sensor data range
 
   /// the size of this min/max array  must be the same as "NUM"
   float[] sensors_max={baseADC+ADCrange/2.0, baseADC+ADCrange/2.0, baseADC+ADCrange/2.0, baseADC+ADCrange/2.0};
@@ -62,7 +62,7 @@ void settings() {
       //Draw data labels
       fill(0);
       text(label[i], 0, height/NUM*(i+0.5));
-      text(adcData[i], 30, height/NUM*(i+0.5));
+//      text(adcData[i], 30, height/NUM*(i+0.5));
 
       // Draw moving clear line
       strokeWeight(3);

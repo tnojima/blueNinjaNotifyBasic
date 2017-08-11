@@ -9,7 +9,7 @@
 import processing.serial.*;
 import hypermedia.net.*;
 final int PORT = 8080;
-  int FRAME_RATE=15;
+int FRAME_RATE=15;
 
 UDP udp;
 String log;
@@ -47,17 +47,17 @@ AirDataWindow air;
 
 // グラフの線の色を格納
 color[] col = {
-  color(255, 127, 31),
-  color(31, 255, 127),
-  color(127, 31, 255),
-  color(31, 127, 255),
-  color(127, 255, 31),
-  color(127, 127, 0),
-  color(127, 127, 0),
-  color(255, 0, 0),
-  color(0, 255, 0),
-  color(0, 0, 255),
-  color(127, 0, 0),
+  color(255, 127, 31), 
+  color(31, 255, 127), 
+  color(127, 31, 255), 
+  color(31, 127, 255), 
+  color(127, 255, 31), 
+  color(127, 127, 0), 
+  color(127, 127, 0), 
+  color(255, 0, 0), 
+  color(0, 255, 0), 
+  color(0, 0, 255), 
+  color(127, 0, 0), 
   color(0, 127, 0)
 };
 
@@ -66,17 +66,16 @@ void setup() {
   udp = new UDP(this, PORT);
   udp.listen(true);
 
-  
-   air = new AirDataWindow(this);
-   mag = new MagDataWindow(this);
-   gyro = new GyroDataWindow (this);
-   acc = new AccDataWindow (this);
-   adc = new ADCDataWindow(this);
 
+  air = new AirDataWindow(this);
+  mag = new MagDataWindow(this);
+  gyro = new GyroDataWindow (this);
+  acc = new AccDataWindow (this);
+  adc = new ADCDataWindow(this);
 }
 
 void draw() {
- }
+}
 
 
 void receive(byte data[]) {
@@ -122,26 +121,20 @@ void receive(byte data[]) {
           } else {
             mgData[dataPoint-6]=int(byteBuf);
           }
-          dataPoint++;
         } else if (flag.equals("AIR")) {
           if (dataPoint==0) {
             //dataPoint is always 0 
             airData[dataPoint]=0.01*int(byteBuf);
-            dataPoint++;
           } else {
             // convert to hect pascal
             airData[dataPoint]=float(int(byteBuf))/256/100;
-            dataPoint++;
           }
         } else if (flag.equals("ADC")) {
-          if (dataPoint==0) {
-            //dataPoint is always 0 
-            adcData[dataPoint]=int(byteBuf);
-            dataPoint++;
-          } 
+          adcData[dataPoint]=int(byteBuf);
         }
         byteBuf="";
         prevSeparator=i;
+        dataPoint++;
       }
     }
     i++;

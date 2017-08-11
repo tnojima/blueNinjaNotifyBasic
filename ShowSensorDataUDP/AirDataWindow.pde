@@ -29,9 +29,9 @@ class AirDataWindow extends PApplet {
 
   int NUM=2;
   String[] label={"TEMP", "AIRP"};
-float baseTemp=28;  /// Base value for sensor data(Temparature in degC)
+float baseTemp=32;  /// Base value for sensor data(Temparature in degC)
   float tempRange=5;  /// Sensor data range
-  float basePress=985;  /// Base value for sensor data(Air Pressure in hPa)
+  float basePress=1001;  /// Base value for sensor data(Air Pressure in hPa)
   float pressRange=2;  /// Sensor data range
   
   float[] sensors_max={baseTemp+tempRange/2.0, basePress+pressRange/2.0};

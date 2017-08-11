@@ -50,7 +50,7 @@ var consoleout=1;
 var consoleMTNout=0;
 var consoleAIRout=0;
 var consoleDINout=1;
-var consoleADCout=1;
+var consoleADCout=0;
 
 var udpout=1;
 var udpMTNout=1;
@@ -285,7 +285,6 @@ BlueNinjaBasic.prototype.convertADCData = function(data, callback) {
 		var adc2 = data.readUInt16LE(offset);offset+=2;
 		var adc3 = data.readUInt16LE(offset);offset+=2;
     	if((consoleout==1)&&(consoleADCout==1)){
-    		console.log(Buffer(data).toString("hex"));
     	    console.log(this.localName+' in [ADC]:'+adc0+':'+adc1+':'+adc2+':'+adc3);
     	}
     	if((udpout==1)&&(udpADCout==1)){
