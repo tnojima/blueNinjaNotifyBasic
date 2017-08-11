@@ -307,7 +307,7 @@ const BLELib_Service pwm_service = {
 
 /* BlueNinja ADC Service */
 static uint16_t adc_enable_val;
-static uint16_t adc_val[4];
+static uint8_t adc_val[8];
 //ADC
 const BLELib_Descriptor adc_desc = {
     GATT_UID_ADC_DESC, 0x2902, 0, BLELIB_UUID_16,
@@ -319,7 +319,7 @@ const BLELib_Characteristics adc_char = {
     GATT_UID_ADC, 0x988ef07959ddcdfb, 0x00040001672711e5, BLELIB_UUID_128,
     BLELIB_PROPERTY_NOTIFY,
     BLELIB_PERMISSION_READ,
-    (uint8_t *)&adc_val, sizeof(adc_val),
+    adc_val, sizeof(adc_val),
     adc_descs, 1
 };
 //Service
@@ -804,7 +804,7 @@ void init_adcc12(void)
     Driver_ADCC12.SetComparison(ADCC12_CMP_DATA_0, 0x00, ADCC12_CMP_NO_COMPARISON, ADCC12_CHANNEL_3);
     
     Driver_ADCC12.SetFIFOOverwrite(ADCC12_FIFO_MODE_STREAM);
-    Driver_ADCC12.SetSamplingPeriod(ADCC12_SAMPLING_PERIOD_64MS);
+    Driver_ADCC12.SetSamplingPeriod(ADCC12_SAMPLING_PERIOD_1MS);
 
     Driver_ADCC12.PowerControl(ARM_POWER_FULL);
     sprintf(
@@ -815,14 +815,27 @@ void init_adcc12(void)
 static void ble_online_adc_sample_notify(void)
 {
     int ret;
+    uint16_t adcval=0;
     //Ch0
-    Driver_ADCC12.ReadData(ADCC12_CHANNEL_0, &adc_val[0]);
+    Driver_ADCC12.ReadData(ADCC12_CHANNEL_0, &adcval);
+    adcval=adcval>>4;
+    memcpy(&adc_val[0], &adcval, 2);
+    adcval=0;
     //Ch1
-    Driver_ADCC12.ReadData(ADCC12_CHANNEL_1, &adc_val[1]);
+    Driver_ADCC12.ReadData(ADCC12_CHANNEL_1, &adcval);
+    adcval=adcval>>4;
+    memcpy(&adc_val[2], &adcval, 2);
+    adcval=0;
     //Ch2
-    Driver_ADCC12.ReadData(ADCC12_CHANNEL_2, &adc_val[2]);
+    Driver_ADCC12.ReadData(ADCC12_CHANNEL_2, &adcval);
+    adcval=adcval>>4;
+    memcpy(&adc_val[4], &adcval, 2);
+    adcval=0;
     //Ch3
-    Driver_ADCC12.ReadData(ADCC12_CHANNEL_3, &adc_val[3]);
+    Driver_ADCC12.ReadData(ADCC12_CHANNEL_3, &adcval);
+    adcval=adcval>>4;
+    memcpy(&adc_val[6], &adcval, 2);
+    adcval=0;
 
     ret = BLELib_notifyValue(GATT_UID_ADC, adc_val, sizeof(adc_val));
     if (ret != BLELIB_OK) {
@@ -930,7 +943,7 @@ static void ble_online_motion_sample_accumulate(void)
 
 static void ble_online_motion_average(uint8_t cnt)
 {
-    uint8_t offset;
+    uint8_t offset=0;
     int16_t ave;
     int16_t div;
     MPU9250_magnetometer_val magm;

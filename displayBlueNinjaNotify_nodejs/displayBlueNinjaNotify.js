@@ -31,6 +31,9 @@ Originally mdified from blueNinjaSingle_ACC 2017/4/29 by Takuya Nojima
   Added UDP data transfer functions to a certain server
   ** How to send data via UDP(Client.js) -> http://d.hatena.ne.jp/seinzumtode/20141130/1417308251
 
+sample circuit for ADC, pin assignments
+https://blueninja.cerevo.com/ja/example/003_adc12/
+
   TODO:
     add termination function
        -> Control+C is used to quit the program. But after this, both devices are also required to restart to connect again.
@@ -42,6 +45,18 @@ Originally mdified from blueNinjaSingle_ACC 2017/4/29 by Takuya Nojima
 var noble = require('noble');
 var NobleDevice=require('noble-device');
 var dgram = require('dgram');
+
+var consoleout=1;
+var consoleMTNout=0;
+var consoleAIRout=0;
+var consoleDINout=1;
+var consoleADCout=1;
+
+var udpout=1;
+var udpMTNout=1;
+var udpAIRout=1;
+var udpDINout=1;
+var udpADCout=1;
 
 ///////////////////////////////////////////////////////////////////////////
 // Configuration of server to send data
@@ -77,7 +92,7 @@ var client = dgram.createSocket('udp4'); /// Create socket
 var udpSend = function (message){
     client.send(message, 0, message.length, PORT, HOST, function(err, bytes) {
         if (err) throw err;
-    console.log('UDP message sent to ' + HOST +':'+ PORT);
+//    console.log('UDP message sent to ' + HOST +':'+ PORT);
     });
 }
 // close socket
@@ -132,19 +147,15 @@ BlueNinjaBasic.prototype.readMotionData = function(callback) {
 /// data format transformation
 BlueNinjaBasic.prototype.convertMotionData = function(data, callback) {
 	var offset=0;
-	// Gyro value in [degree/s]
+	// Gyro value in gr{xyz}/16.4 [deg/s]
 	var grx = data.readInt16LE(offset);offset+=2;
 	var gry = data.readInt16LE(offset);offset+=2;
 	var grz = data.readInt16LE(offset);offset+=2;
-	// actual Gyro value will be gr{xyz}/16.4 [deg/s]
-	console.log(this.localName+' in [deg/s]:'+grx/16.4+','+gry/16.4+','+grz/16.4+'');	
-	// Accelerometer value in [G]
+	// Accelerometer value in  ac{xyz}/2048 [G]
 	var acx = data.readInt16LE(offset);offset+=2;
 	var acy = data.readInt16LE(offset);offset+=2;
 	var acz = data.readInt16LE(offset);offset+=2;
-	// actual aceleration value will be ac{xyz}/2048 [G]
-	console.log(this.localName+' in [G]:'+acx/2048+','+acy/2048+','+acz/2048);
-       // Magneto value
+     // Magneto value
 	var mgx = data.readUInt16LE(offset);offset+=2;
 	if(mgx>0xffff/2){
 	    mgx=mgx-0xffff;
@@ -157,8 +168,17 @@ BlueNinjaBasic.prototype.convertMotionData = function(data, callback) {
 	if(mgz>0xffff/2){
 	    mgz=mgz-0xffff;
 	}
-	console.log(this.localName+' in [?]:'+mgx+','+mgy+','+mgz+'');	
-    udpSend('MTN,'+acx+','+acy+','+acz+','+grx+','+gry+','+grz+','+mgx+','+mgy+','+mgz+'\n');
+	if((consoleout==1)&&(consoleMTNout==1)){
+	    // actual Gyro value will be gr{xyz}/16.4 [deg/s]
+	    console.log(this.localName+' in [deg/s]:'+grx/16.4+','+gry/16.4+','+grz/16.4+'');	
+	    // actual aceleration value will be ac{xyz}/2048 [G]
+	    console.log(this.localName+' in [G]:'+acx/2048+','+acy/2048+','+acz/2048);
+	    // actual mag data
+	    console.log(this.localName+' in [--]:'+mgx+','+mgy+','+mgz+'');	
+	}
+	if((udpout==1)&&(udpMTNout==1)){
+	    udpSend('MTN,'+acx+','+acy+','+acz+','+grx+','+gry+','+grz+','+mgx+','+mgy+','+mgz+'\n');
+	}
 };
 
 //=========================================================
@@ -205,13 +225,18 @@ BlueNinjaBasic.prototype.convertAirPData = function(data, callback) {
 	var offset=0;
 	// Temparature value in [0.01digC]
 	var temp = data.readInt16LE(offset);offset+=2;
-	/// actual temparature will be temp*0.01[C]
-	console.log(this.localName+' in [digC]:'+temp*0.01);	
 	//Air Pressure value in [1/256Pa]
 	var airP = data.readInt32LE(offset);offset+=2;
-	// actual air pressure will be airP/256[Pa]
-	console.log(this.localName+' in [Pa]:'+airP/256);
-    udpSend('AIR,'+temp+','+airP+'\n');
+	
+	if((consoleout==1)&&(consoleAIRout==1)){
+	    /// actual temparature will be temp*0.01[C]
+	    console.log(this.localName+' in [digC]:'+temp*0.01);	
+	    // actual air pressure will be airP/256[Pa]
+	    console.log(this.localName+' in [Pa]:'+airP/256);
+	}
+	if((udpout==1)&&(udpAIRout==1)){
+	    udpSend('AIR,'+temp+','+airP+'\n');
+	}
 };
 
 
@@ -259,8 +284,13 @@ BlueNinjaBasic.prototype.convertADCData = function(data, callback) {
 		var adc1 = data.readUInt16LE(offset);offset+=2;
 		var adc2 = data.readUInt16LE(offset);offset+=2;
 		var adc3 = data.readUInt16LE(offset);offset+=2;
-		console.log(this.localName+' in [ADC]:'+adc0+':'+adc1+':'+adc2+':'+adc3);
-        udpSend('ADC,'+adc0+','+adc1+','+adc2+','+adc3+'\n');
+    	if((consoleout==1)&&(consoleADCout==1)){
+    		console.log(Buffer(data).toString("hex"));
+    	    console.log(this.localName+' in [ADC]:'+adc0+':'+adc1+':'+adc2+':'+adc3);
+    	}
+    	if((udpout==1)&&(udpADCout==1)){
+    	    udpSend('ADC,'+adc0+','+adc1+','+adc2+','+adc3+'\n');
+    	}
 };
 
 //=========================================================
@@ -307,8 +337,12 @@ BlueNinjaBasic.prototype.convertReceivedGPIOData = function(data, callback) {
 	var gpio_17=gpio_val&0x01;gpio_val = gpio_val>>1;
 	var gpio_18=gpio_val&0x01;gpio_val = gpio_val>>1;
 	var gpio_19=gpio_val&0x01;gpio_val = gpio_val>>1;
-	console.log(this.localName+' in [GPIO_in]:'+gpio_16+':'+gpio_17+':'+gpio_18+':'+gpio_19);
-    udpSend('DIN,'+gpio_16+','+gpio_17+','+gpio_18+','+gpio_19+'\n');
+   	if((consoleout==1)&&(consoleDINout==1)){
+   	 console.log(this.localName+' in [GPIO_in]:'+gpio_16+':'+gpio_17+':'+gpio_18+':'+gpio_19);
+   	}
+   	if((udpout==1)&&(udpDINout==1)){
+   	 udpSend('DIN,'+gpio_16+','+gpio_17+','+gpio_18+','+gpio_19+'\n');
+   	}
 };
 var gpio_20, gpio_21, gpio_22, gpio_23;
 /// data format transformation
@@ -321,7 +355,7 @@ BlueNinjaBasic.prototype.convertSendingGPIOData = function(data, callback) {
     gpio_send_val=(gpio_send_val << 4)&0xf0;
     
 	data.writeUInt8(gpio_send_val);
-	console.log(this.localName+' in [GPIO_out]:'+gpio_send_val+':'+gpio_20+':'+gpio_21+':'+gpio_22+':'+gpio_23);
+	//console.log(this.localName+' in [GPIO_out]:'+gpio_send_val+':'+gpio_20+':'+gpio_21+':'+gpio_22+':'+gpio_23);
 
 };
 
@@ -378,7 +412,7 @@ myDevice_R.discover(function(device) {
 
     });
 });
-
+/*
 process.on('SIGINT', function() {
     console.log("Caught interrupt signal");
     if(myDevice_R.is){
@@ -388,5 +422,5 @@ process.on('SIGINT', function() {
  	});
 }
 });
-
+*/
 
