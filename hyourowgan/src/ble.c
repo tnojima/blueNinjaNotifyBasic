@@ -758,17 +758,17 @@ static void ble_online_gpio_update_val(void)
         di |= 0x08;
     }
 
-//    if ((gpio_val & 0x0f) != di) {
+    if ((gpio_read_val & 0x0f) != di) {
         //変化あったので反映
-//        gpio_val &= 0xf0;
-//        gpio_val |= di;
+        gpio_read_val &= 0xf0;
+        gpio_read_val |= di;
        //int ret =  BLELib_updateValue(GATT_UID_GPIO_READ, &gpio_read_val, sizeof(gpio_read_val));
-//    }
+    }
      
     int ret = BLELib_notifyValue(GATT_UID_GPIO_READ, &gpio_read_val, sizeof(gpio_read_val));
     if (ret != BLELIB_OK) {
         sprintf(msg, "BLERET: %d, GPIO:%x\r\n", ret,gpio_read_val);
-    TZ01_console_puts(msg);
+        TZ01_console_puts(msg);
     }
 }
 
@@ -1077,8 +1077,8 @@ int BLE_main(void)
                 
                 //GPIO入力サンプリング/通知(count_gpio_in*10ms毎)
                 if (gpio_enable_val == 1) {
+                    di_state_update();
                     if ((cnt % count_gpio_in) == 0) {
-                        di_state_update();
                         ble_online_gpio_update_val();
                     }
                 }
